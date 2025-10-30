@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import React from 'react';
-import { QuotePDF } from '@/lib/pdf';
+import { QuotePDF } from '../../../lib/pdf';
 import { pdf } from '@react-pdf/renderer';
 
 const resend = new Resend(process.env.RESEND_API_KEY);

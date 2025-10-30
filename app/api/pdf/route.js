@@ -1,6 +1,6 @@
 import React from 'react';
 import { NextResponse } from 'next/server';
-import { QuotePDF } from '@/lib/pdf';
+import { QuotePDF } from '../../../lib/pdf';
 import { pdf } from '@react-pdf/renderer';
 
 export async function POST(req) {
