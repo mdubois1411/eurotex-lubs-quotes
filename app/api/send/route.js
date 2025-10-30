@@ -1,3 +1,4 @@
+// app/api/send/route.js
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import React from 'react';
@@ -14,7 +15,13 @@ export async function POST(req) {
 
     const pdfBuffer = await pdf(<QuotePDF {...body} />).toBuffer();
 
-    const ccList = (cc && cc.length) ? cc : (process.env.DEFAULT_CC || '').split(',').map(s => s.trim()).filter(Boolean);
+    const ccList = (cc && cc.length)
+      ? cc
+      : (process.env.DEFAULT_CC || '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+
     const subject = `EUROTEX LUBS – Cotización ${body?.meta?.number || ''}`.trim();
 
     const { data, error } = await resend.emails.send({

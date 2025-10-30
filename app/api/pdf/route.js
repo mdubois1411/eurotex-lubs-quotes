@@ -1,3 +1,4 @@
+// app/api/pdf/route.js
 import React from 'react';
 import { NextResponse } from 'next/server';
 import { QuotePDF } from '../../../lib/pdf';

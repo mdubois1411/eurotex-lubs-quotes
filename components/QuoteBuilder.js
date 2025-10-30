@@ -1,6 +1,7 @@
+// components/QuoteBuilder.js
 'use client';
 import { useMemo, useState } from 'react';
-import { PRODUCTS } from '../lib/products';
+import { PRODUCTS } from '../lib/products'; // <-- relativo, NO '@/lib/products'
 
 const styles = {
   container: { maxWidth: 960, margin: '0 auto', padding: 16 },
