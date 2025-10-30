@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { PRODUCTS } from '@/lib/products';
+import { PRODUCTS } from '../lib/products';
 
 const styles = {
   container: { maxWidth: 960, margin: '0 auto', padding: 16 },
