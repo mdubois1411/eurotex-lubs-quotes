@@ -1,13 +1,9 @@
 /** @type {import('next').NextConfig} */
-const path = require('path');
-
 const nextConfig = {
-  experimental: { serverActions: true },
-  webpack: (config) => {
-    // Alias '@' => raíz del proyecto
-    config.resolve.alias['@'] = path.resolve(__dirname);
-    return config;
-  }
+  // Clean production config - no experimental flags needed for Next.js 14
+  reactStrictMode: true,
+  poweredByHeader: false,
+  compress: true,
 };
 
 module.exports = nextConfig;
