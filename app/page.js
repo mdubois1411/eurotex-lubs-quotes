@@ -1,6 +1,6 @@
 // app/page.js
-import QuoteBuilder from '../components/QuoteBuilder';
+import QuoteBuilderV2 from '../components/QuoteBuilderV2';
 
 export default function Page() {
-  return <QuoteBuilder />;
+  return <QuoteBuilderV2 />;
 }
