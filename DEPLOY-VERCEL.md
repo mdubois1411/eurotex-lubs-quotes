@@ -72,7 +72,15 @@ NEXT_PUBLIC_BANK_ACCOUNT=Cuenta Corriente BCP: 194-2345678-0-90
 NEXT_PUBLIC_CCI=002-194-002345678090-15
 ```
 
-### Resend API (para envío de emails)
+### Gmail SMTP (para envío de emails) - **RECOMENDADO**
+```
+GMAIL_USER=ventas.eurotex@gmail.com
+GMAIL_APP_PASSWORD=tu_app_password_de_16_caracteres
+```
+
+**📧 Cómo obtener estas credenciales:** Ver archivo [CONFIGURAR-GMAIL.md](./CONFIGURAR-GMAIL.md)
+
+### Resend API (alternativa opcional)
 ```
 RESEND_API_KEY=tu_api_key_de_resend
 ```
