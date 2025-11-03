@@ -278,33 +278,50 @@ export default function QuoteBuilderV2() {
   const [recipients, setRecipients] = useState([]);
   const [selectedRecipients, setSelectedRecipients] = useState([]);
   const [products, setProducts] = useState([]);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [selectedBankAccounts, setSelectedBankAccounts] = useState([]);
   const [rows, setRows] = useState([]);
   const [filter, setFilter] = useState('');
-  const [number, setNumber] = useState(() => `2025.${Math.floor(Math.random() * 9000 + 1000)}`);
+  const [number, setNumber] = useState('');
   const [version, setVersion] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [mounted, setMounted] = useState(false);
+
   const [discount, setDiscount] = useState(0);
   const [emailBody, setEmailBody] = useState(`Estimado cliente,\n\nAdjunto encontrará la cotización solicitada junto con las fichas técnicas de los productos.\n\nQuedamos atentos a cualquier consulta.\n\nSaludos cordiales,\nEUROTEX LUBS`);
   const [loading, setLoading] = useState(false);
   const [catalogView, setCatalogView] = useState('table'); // 'table' o 'grid'
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showHistory, setShowHistory] = useState(false);
   const taxRate = 0.18;
   const currency = 'USD';
+
+  // Generar número de cotización solo en el cliente
+  useEffect(() => {
+    setNumber(`2025.${Math.floor(Math.random() * 9000 + 1000)}`);
+    setMounted(true);
+  }, []);
 
   // Cargar datos desde APIs
   useEffect(() => {
     async function loadData() {
       try {
-        const [clientsRes, recipientsRes, productsRes] = await Promise.all([
+        const [clientsRes, recipientsRes, productsRes, bankAccountsRes] = await Promise.all([
           fetch('/api/clients').then(r => r.json()),
           fetch('/api/recipients').then(r => r.json()),
           fetch('/api/products').then(r => r.json()),
+          fetch('/api/bank-accounts').then(r => r.json()),
         ]);
 
         if (clientsRes.ok) setClients(clientsRes.clients);
         if (recipientsRes.ok) setRecipients(recipientsRes.recipients);
         if (productsRes.ok) setProducts(productsRes.products);
+        if (bankAccountsRes.ok) {
+          setBankAccounts(bankAccountsRes.bankAccounts);
+          // Seleccionar todas las cuentas por defecto
+          setSelectedBankAccounts(bankAccountsRes.bankAccounts.map(b => b.id));
+        }
       } catch (error) {
         console.error('Error al cargar datos:', error);
       }
@@ -376,6 +393,14 @@ export default function QuoteBuilderV2() {
     );
   };
 
+  const toggleBankAccount = (bankAccountId) => {
+    setSelectedBankAccounts(prev =>
+      prev.includes(bankAccountId)
+        ? prev.filter(id => id !== bankAccountId)
+        : [...prev, bankAccountId]
+    );
+  };
+
   const subtotal = rows.reduce((a, r) => {
     const lineTotal = r.unit_price * r.qty;
     const lineDiscount = lineTotal * (r.discount / 100);
@@ -389,13 +414,15 @@ export default function QuoteBuilderV2() {
 
   const quoteNumber = version ? `${number}${version}` : number;
 
+  // Obtener las cuentas bancarias seleccionadas
+  const selectedBankAccountsData = bankAccounts.filter(b => selectedBankAccounts.includes(b.id));
+
   const payload = {
     company: {
       name: process.env.NEXT_PUBLIC_COMPANY_NAME || 'EUROTEX INDUSTRIAL SAC – DIV. EUROTEX LUBS',
       ruc: process.env.NEXT_PUBLIC_COMPANY_RUC || '20611105909',
       address: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || 'Jr. Hawaii 226 – La Molina – Lima – Perú',
-      bankAccount: process.env.NEXT_PUBLIC_BANK_ACCOUNT || '',
-      cci: process.env.NEXT_PUBLIC_CCI || '',
+      bankAccounts: selectedBankAccountsData,
     },
     client,
     items: rows,
@@ -472,11 +499,62 @@ export default function QuoteBuilderV2() {
     }
   };
 
+  const saveQuote = async () => {
+    if (rows.length === 0) {
+      alert('Agrega al menos un producto');
+      return;
+    }
+    if (!client.name) {
+      alert('Ingresa el nombre del cliente');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/quotes/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert('✅ Cotización guardada correctamente');
+      } else {
+        alert('❌ Error: ' + data.error);
+      }
+    } catch (e) {
+      alert('❌ Error al guardar: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (showHistory) {
+    const QuoteHistory = require('./QuoteHistory').default;
+    return <QuoteHistory onBack={() => setShowHistory(false)} />;
+  }
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <img src="/logo-eurotex.png" alt="EUROTEX LUBS" style={styles.logo} />
         <h1 style={styles.h1}>Nueva Cotización - EUROTEX LUBS</h1>
+        <button
+          style={{
+            padding: '10px 20px',
+            borderRadius: 8,
+            background: '#6c757d',
+            color: '#fff',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+          onClick={() => setShowHistory(true)}
+          onMouseEnter={e => e.currentTarget.style.background = '#5a6268'}
+          onMouseLeave={e => e.currentTarget.style.background = '#6c757d'}
+        >
+          📋 Ver Historial
+        </button>
       </div>
 
       {/* Client Info */}
@@ -870,6 +948,33 @@ export default function QuoteBuilderV2() {
         <section style={styles.section}>
           <h2 style={styles.sectionTitle}>Configuración de Envío</h2>
 
+          <label style={styles.label}>Cuentas Bancarias a Incluir</label>
+          <div style={{ marginBottom: 16 }}>
+            {bankAccounts.length > 0 ? (
+              bankAccounts.map(b => (
+                <div key={b.id} style={styles.recipientItem}>
+                  <input
+                    type="checkbox"
+                    style={styles.checkbox}
+                    checked={selectedBankAccounts.includes(b.id)}
+                    onChange={() => toggleBankAccount(b.id)}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <strong>{b.bankName}</strong> - {b.currency} ({b.accountType})
+                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                      <div><strong>Cuenta:</strong> {b.accountNumber}</div>
+                      <div><strong>CCI:</strong> {b.cci}</div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: 12, background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 6, color: '#856404', fontSize: 13 }}>
+                ⚠️ No hay cuentas bancarias configuradas. Configura la hoja "CuentasBancarias" en Google Sheets.
+              </div>
+            )}
+          </div>
+
           <label style={styles.label}>Destinatarios Adicionales</label>
           {recipients.map(r => (
             <div key={r.id} style={styles.recipientItem}>
@@ -891,6 +996,21 @@ export default function QuoteBuilderV2() {
           />
 
           <div style={styles.buttonGroup}>
+            <button
+              style={{
+                ...styles.button,
+                background: '#ffc107',
+                color: '#000',
+              }}
+              onClick={saveQuote}
+              disabled={loading}
+              onMouseEnter={e => e.currentTarget.style.background = '#e0a800'}
+              onMouseLeave={e => {
+                if (!loading) e.currentTarget.style.background = '#ffc107';
+              }}
+            >
+              {loading ? '⏳ Guardando...' : '💾 Guardar Cotización'}
+            </button>
             <button
               style={styles.button}
               onClick={generatePDF}
