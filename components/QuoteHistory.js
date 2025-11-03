@@ -181,6 +181,30 @@ const styles = {
   },
 };
 
+// Función helper para formatear fecha/hora
+function formatDateTime(dateString) {
+  if (!dateString) return 'N/A';
+
+  try {
+    // Si viene en formato ISO o similar
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Si no es válida, devolver el string original
+
+    // Formatear en zona horaria de Perú
+    return date.toLocaleString('es-PE', {
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (error) {
+    return dateString;
+  }
+}
+
 export default function QuoteHistory({ onBack }) {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -283,9 +307,9 @@ export default function QuoteHistory({ onBack }) {
               <thead>
                 <tr>
                   <th style={styles.th}>Número</th>
-                  <th style={styles.th}>Fecha</th>
+                  <th style={styles.th}>Fecha Cotiz.</th>
+                  <th style={styles.th}>Guardada</th>
                   <th style={styles.th}>Cliente</th>
-                  <th style={styles.th}>Email</th>
                   <th style={styles.th}>Total</th>
                   <th style={styles.th}>Estado</th>
                   <th style={styles.th}>Acciones</th>
@@ -298,8 +322,12 @@ export default function QuoteHistory({ onBack }) {
                       <strong style={{ color: '#0066cc' }}>{q.number}</strong>
                     </td>
                     <td style={styles.td}>{q.date}</td>
+                    <td style={styles.td}>
+                      <span style={{ fontSize: 11, color: '#666' }}>
+                        {formatDateTime(q.savedAt)}
+                      </span>
+                    </td>
                     <td style={styles.td}>{q.clientName}</td>
-                    <td style={styles.td}>{q.clientEmail}</td>
                     <td style={styles.td}>
                       <strong style={{ color: '#28a745' }}>
                         {q.currency} {q.total.toFixed(2)}
