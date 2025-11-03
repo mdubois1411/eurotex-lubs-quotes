@@ -50,6 +50,72 @@ const styles = {
     marginBottom: 16,
     fontSize: 14,
   },
+  filterRow: {
+    display: 'grid',
+    gridTemplateColumns: '2fr 1fr 1fr auto',
+    gap: 12,
+    marginBottom: 16,
+  },
+  input: {
+    border: '1px solid #ccc',
+    borderRadius: 6,
+    padding: '10px 12px',
+    fontSize: 14,
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  clearButton: {
+    padding: '10px 16px',
+    borderRadius: 6,
+    background: '#dc3545',
+    color: '#fff',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 500,
+    whiteSpace: 'nowrap',
+  },
+  pagination: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    padding: '12px 16px',
+    background: '#f8f9fa',
+    borderRadius: 6,
+    fontSize: 13,
+  },
+  paginationButtons: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  pageButton: {
+    padding: '6px 12px',
+    border: '1px solid #ccc',
+    borderRadius: 4,
+    background: '#fff',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 500,
+  },
+  pageButtonActive: {
+    background: '#0066cc',
+    color: '#fff',
+    border: '1px solid #0066cc',
+  },
+  pageButtonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  select: {
+    border: '1px solid #ccc',
+    borderRadius: 6,
+    padding: '6px 8px',
+    fontSize: 13,
+    background: '#fff',
+    cursor: 'pointer',
+  },
   table: {
     width: '100%',
     fontSize: 13,
@@ -211,6 +277,15 @@ export default function QuoteHistory({ onBack }) {
   const [search, setSearch] = useState('');
   const [selectedQuote, setSelectedQuote] = useState(null);
 
+  // Filtros
+  const [filterClient, setFilterClient] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   useEffect(() => {
     loadQuotes();
   }, []);
@@ -230,15 +305,57 @@ export default function QuoteHistory({ onBack }) {
     }
   };
 
-  const filteredQuotes = quotes.filter(q =>
-    search === '' ||
-    q.number.toLowerCase().includes(search.toLowerCase()) ||
-    q.clientName.toLowerCase().includes(search.toLowerCase()) ||
-    q.clientEmail.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtrado avanzado
+  const filteredQuotes = quotes.filter(q => {
+    // Filtro de búsqueda general
+    const matchesSearch = search === '' ||
+      q.number.toLowerCase().includes(search.toLowerCase()) ||
+      q.clientName.toLowerCase().includes(search.toLowerCase()) ||
+      q.clientEmail.toLowerCase().includes(search.toLowerCase());
+
+    // Filtro por cliente
+    const matchesClient = filterClient === '' ||
+      q.clientName.toLowerCase().includes(filterClient.toLowerCase());
+
+    // Filtro por rango de fechas
+    let matchesDateRange = true;
+    if (filterDateFrom || filterDateTo) {
+      const quoteDate = new Date(q.date);
+      if (filterDateFrom) {
+        const fromDate = new Date(filterDateFrom);
+        matchesDateRange = matchesDateRange && quoteDate >= fromDate;
+      }
+      if (filterDateTo) {
+        const toDate = new Date(filterDateTo);
+        toDate.setHours(23, 59, 59, 999); // Incluir todo el día
+        matchesDateRange = matchesDateRange && quoteDate <= toDate;
+      }
+    }
+
+    return matchesSearch && matchesClient && matchesDateRange;
+  });
+
+  // Resetear a página 1 cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterClient, filterDateFrom, filterDateTo]);
+
+  // Paginación
+  const totalPages = Math.ceil(filteredQuotes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedQuotes = filteredQuotes.slice(startIndex, endIndex);
 
   const totalQuotes = quotes.length;
   const totalAmount = quotes.reduce((sum, q) => sum + q.total, 0);
+
+  // Limpiar filtros
+  const clearFilters = () => {
+    setSearch('');
+    setFilterClient('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+  };
 
   const viewQuoteDetails = async (quoteId) => {
     try {
@@ -290,10 +407,51 @@ export default function QuoteHistory({ onBack }) {
         <input
           type="text"
           style={styles.searchBox}
-          placeholder="🔍 Buscar por número, cliente o email..."
+          placeholder="🔍 Búsqueda rápida: número, cliente o email..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+
+        {/* Filtros Avanzados */}
+        <div style={styles.filterRow}>
+          <input
+            type="text"
+            style={styles.input}
+            placeholder="Filtrar por cliente..."
+            value={filterClient}
+            onChange={e => setFilterClient(e.target.value)}
+          />
+          <input
+            type="date"
+            style={styles.input}
+            placeholder="Desde"
+            value={filterDateFrom}
+            onChange={e => setFilterDateFrom(e.target.value)}
+            title="Fecha desde"
+          />
+          <input
+            type="date"
+            style={styles.input}
+            placeholder="Hasta"
+            value={filterDateTo}
+            onChange={e => setFilterDateTo(e.target.value)}
+            title="Fecha hasta"
+          />
+          <button
+            style={styles.clearButton}
+            onClick={clearFilters}
+            onMouseEnter={e => e.currentTarget.style.background = '#c82333'}
+            onMouseLeave={e => e.currentTarget.style.background = '#dc3545'}
+          >
+            ✕ Limpiar
+          </button>
+        </div>
+
+        {/* Info de resultados */}
+        <div style={{ marginBottom: 12, fontSize: 13, color: '#666' }}>
+          Mostrando {paginatedQuotes.length} de {filteredQuotes.length} cotizaciones
+          {filteredQuotes.length !== totalQuotes && ` (${totalQuotes} total)`}
+        </div>
 
         {loading ? (
           <div style={styles.loading}>⏳ Cargando cotizaciones...</div>
@@ -316,7 +474,7 @@ export default function QuoteHistory({ onBack }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredQuotes.map(q => (
+                {paginatedQuotes.map(q => (
                   <tr key={q.id}>
                     <td style={styles.td}>
                       <strong style={{ color: '#0066cc' }}>{q.number}</strong>
@@ -350,6 +508,102 @@ export default function QuoteHistory({ onBack }) {
                 ))}
               </tbody>
             </table>
+
+            {/* Paginación */}
+            {filteredQuotes.length > 0 && (
+              <div style={styles.pagination}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span>Mostrar:</span>
+                  <select
+                    style={styles.select}
+                    value={itemsPerPage}
+                    onChange={e => {
+                      setItemsPerPage(parseInt(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span>
+                    Mostrando {startIndex + 1}-{Math.min(endIndex, filteredQuotes.length)} de {filteredQuotes.length}
+                  </span>
+                </div>
+
+                <div style={styles.paginationButtons}>
+                  <button
+                    style={{
+                      ...styles.pageButton,
+                      ...(currentPage === 1 ? styles.pageButtonDisabled : {})
+                    }}
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    ««
+                  </button>
+                  <button
+                    style={{
+                      ...styles.pageButton,
+                      ...(currentPage === 1 ? styles.pageButtonDisabled : {})
+                    }}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    ‹
+                  </button>
+
+                  {[...Array(totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    // Mostrar solo páginas cercanas a la actual
+                    if (
+                      pageNum === 1 ||
+                      pageNum === totalPages ||
+                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          style={{
+                            ...styles.pageButton,
+                            ...(currentPage === pageNum ? styles.pageButtonActive : {})
+                          }}
+                          onClick={() => setCurrentPage(pageNum)}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                      return <span key={pageNum}>...</span>;
+                    }
+                    return null;
+                  })}
+
+                  <button
+                    style={{
+                      ...styles.pageButton,
+                      ...(currentPage === totalPages ? styles.pageButtonDisabled : {})
+                    }}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    ›
+                  </button>
+                  <button
+                    style={{
+                      ...styles.pageButton,
+                      ...(currentPage === totalPages ? styles.pageButtonDisabled : {})
+                    }}
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                  >
+                    »»
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
